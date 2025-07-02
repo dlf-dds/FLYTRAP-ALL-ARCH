@@ -83,9 +83,3 @@ The `pre-commit` hook re-exports any staged `.drawio` files to matching `.pngs` 
 > **Tip:** Our GitHub Actions workflow re-exports every diagram and fails the build if a pushed `.png` is out of date. Run `make` (or rely on the pre-commit hook) before committing to keep your PR green.
 
 See `.github/workflows/diagrams.yml` for the exact CI check.
-
-
-
-
-
-
