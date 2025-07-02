@@ -1,4 +1,4 @@
-# Makefile ─ exports exactly the PNGs you ask for, using the Docker CLI
+# root-level Makefile  ─ single source of truth
 
 DRAWIO ?= docker run --rm \
          -v "$$(pwd)":/workspace \
@@ -10,11 +10,14 @@ PNGS    := $(DRAWIOS:.drawio=.png)
 
 all: $(PNGS)
 
-# Pattern rule: given  path/to/foo.png
-#   $<  = path/to/foo.drawio
-#   $@  = path/to/foo.png
+# -------------------------------------------------------
+# $< = path/to/foo.drawio
+# $@ = path/to/foo.png
 %.png: %.drawio
 	@echo "Exporting $< → $@"
-	@DIR=$$(dirname "$@"); SRC=$$(basename "$<"); \
-	  $(DRAWIO) -f png -o "$$DIR" "$<" && \
-	  mv "$$DIR/$$SRC.png" "$@"
+	@DIR=$$(dirname "$@"); BASEN=$$(basename "$@" .png); \
+	  $(DRAWIO) -f png -o "$$DIR" "$<" && { \
+	    test -f "$$DIR/$$BASEN-Page-1.png" && mv "$$DIR/$$BASEN-Page-1.png" "$@" || \
+	    mv "$$DIR/$$BASEN.png" "$@"; \
+	  }
+# -------------------------------------------------------
