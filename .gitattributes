@@ -1,0 +1,5 @@
+# Draw.io sources → XML diff
+*.drawio diff=xml
+
+# PNGs via Git LFS
+*.png filter=lfs diff=lfs merge=lfs -text
