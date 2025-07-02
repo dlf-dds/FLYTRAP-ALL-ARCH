@@ -1,0 +1,123 @@
+
+# ARCH DIAGRAM DEV README
+
+_Architecture diagrams for **Joint EX FLYTRAP / VANAHEIM**_
+
+[![Draw.io diagram check](https://github.com/dlf-dds/FLYTRAP-ALL-ARCH/actions/workflows/diagrams.yml/badge.svg)](https://github.com/dlf-dds/FLYTRAP-ALL-ARCH/actions/workflows/diagrams.yml)
+
+
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/)  
+  Runs the Draw.io CLI without installing the desktop app
+- Git ≥ 2.9  
+  Needed for `core.hooksPath`
+
+
+
+## First-time setup
+
+Pull the Draw.io CLI container:
+
+```sh
+# Pull the Docker CLI (recommended)
+docker pull rlespinasse/drawio-export
+```
+
+This Makefile, in the project root dir, renders .drawio to .png files.
+
+```makefile
+# root-level Makefile – works for any depth, single or multi-page diagrams
+
+DRAWIO_IMAGE = rlespinasse/drawio-export
+# We’ll launch the container with "-v $(PWD):/workspace"
+# and then "-w /workspace/<diagram-dir>" for each file.
+
+# list changed *.drawio that still exist in HEAD
+DRAWIOS=$(git diff --name-only --diff-filter=AM "$BASE" HEAD -- '*.drawio')
+
+PNGS    := $(DRAWIOS:.drawio=.png)
+
+all: $(PNGS)
+
+# target $@  : diagrams/foo.png
+# source $<  : diagrams/foo.drawio
+%.png: %.drawio
+	@SRC='$<';           \
+	  DIR=$$(dirname "$$SRC");                    \
+	  NAME=$$(basename "$$SRC" .drawio);          \
+	  echo "Exporting $$SRC → $@";                \
+	  docker run --rm                             \
+	    -v "$(PWD)":/workspace                    \
+	    -w "/workspace/$$DIR"                     \
+	    $(DRAWIO_IMAGE)                           \
+	    -f png -o . "$$NAME.drawio" &&            \
+	  (                                           \
+	    mv "$$DIR/$$NAME-Page-1.png" "$@" 2>/dev/null || \
+	    mv "$$DIR/$$NAME.png"        "$@" 2>/dev/null     \
+	  )
+
+
+```
+
+## Keeping diagrams fresh ★ **Important**
+
+Every `.drawio` source **must** have a matching, up-to-date `.png` next to it.
+The PNGs are what non-Draw.io users (and GitHub’s preview) rely on.
+
+| How to stay green | What it does |
+|-------------------|--------------|
+| **Preferred**<br>Just commit normally – the **`pre-commit` hook** auto-exports fresh PNGs for any staged `.drawio` files and stages them for you. | Fast, fool-proof. |
+| **Manual**<br>`make path/to/diagram.png` (or simply `make` when in that folder) then `git add` the PNG. | Use if you skip hooks with `--no-verify`. |
+
+The badge at the top of the README shows the most-recent **CI run**:
+
+[![Draw.io diagram check](https://github.com/dlf-dds/FLYTRAP-ALL-ARCH/actions/workflows/diagrams.yml/badge.svg)](https://github.com/dlf-dds/FLYTRAP-ALL-ARCH/actions/workflows/diagrams.yml)
+
+* **Green** ⇒ every PNG byte-for-byte matches the diagram it was generated from.  
+* **Red**   ⇒ at least one PNG is missing or stale. CI tells you which file(s)—re-export, commit, push.
+
+> **Under the hood**  
+> * Locally, `make` only runs when the diagram’s timestamp is newer than its PNG.  
+> * In CI we force-rebuild just the diagrams changed in the push (`make -B`) and compare file contents with `git diff`. Timestamps alone don’t pass the test—PNG bytes must be identical.
+
+---
+
+### Git Settings
+Place this in `.gitattributes` to ensure proper handling of the `.drawio` files and their binary exports:
+
+```gitattributes
+# Use XML diff for source diagrams (default)
+*.drawio diff=xml
+# To enable a custom diff driver instead, comment the line above and uncomment:
+# *.drawio diff=drawio
+
+# Exported images are binary
+*.png binary
+
+```
+
+
+### Git hooks
+
+```sh
+# Activate repo-local hooks
+git config core.hooksPath .githooks
+
+# Ensure the pre-commit script is executable
+chmod +x .githooks/pre-commit
+```
+
+The `pre-commit` hook re-exports any staged `.drawio` files to matching `.pngs` and re-adds them to the commit.
+
+See `.githooks/pre-commit` for the full script that calls `make` on staged diagrams.
+
+
+### CI safety net
+
+> **Tip:** Our GitHub Actions workflow re-exports every diagram and fails the build if a pushed `.png` is out of date. Run `make` (or rely on the pre-commit hook) before committing to keep your PR green.
+
+See `.github/workflows/diagrams.yml` for the exact CI check.
+
+CI rebuilds only the diagrams changed in a push/PR (using make -B …targets…) so runs stay quick even in large repos.

@@ -1,0 +1,110 @@
+name: Verify Draw.io diagrams
+
+on:
+  # Manual button
+  workflow_dispatch:
+  # Every push on *any* branch
+  push:
+  # Every PR (from any branch into any branch)
+  pull_request:
+
+jobs:
+  export-and-verify:
+    runs-on: ubuntu-latest
+    
+    # 0 ▸ check out full history
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0          # we need the merge-base for git diff
+
+    # 1 ▸ restore cache (if present)
+    - name: Restore Docker layer cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: /tmp/drawio-cache
+        # key can include image digest or tag to bust the cache when updated
+        key: drawio-export-${{ runner.os }}-v1
+
+    # ────────────────────────────────
+    # 2 ▸ list changed *.drawio files
+    # ────────────────────────────────
+    - name: Collect changed diagrams
+      id: changed
+      shell: bash
+      run: |
+        # figure out the "before" SHA
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          BASE="${{ github.event.pull_request.base.sha }}"
+        else
+          BASE="${{ github.event.before }}"
+        fi
+        # fallback for first push on a branch
+        [[ "$BASE" == "0000000000000000000000000000000000000000" ]] && \
+          BASE=$(git rev-list --max-parents=0 HEAD)
+
+        echo "BASE=$BASE"
+
+        # get changed drawio paths
+        DRAWIOS=$(git diff --name-only "$BASE" HEAD -- '*.drawio')
+        echo "DRAWIOS:"
+        echo "$DRAWIOS"
+
+        # build matching png list
+        PNGS=$(echo "$DRAWIOS" | sed 's/\.drawio$/.png/' | xargs)
+        echo "PNGS=$PNGS" >>"$GITHUB_OUTPUT"
+
+    # ────────────────────────────────
+    # 3 ▸ regenerate only those PNGs
+    # ────────────────────────────────
+    - name: Regenerate changed diagrams
+      if: steps.changed.outputs.PNGS != ''
+      run: |
+        echo "make -B targets: ${{ steps.changed.outputs.PNGS }}"
+        make -B ${{ steps.changed.outputs.PNGS }}
+
+
+    # ────────────────────────────────
+    # 4 ▸ fail if any PNG is stale
+    # ────────────────────────────────
+    - name: Verify diagrams up-to-date
+      if: steps.changed.outputs.PNGS != ''
+      run: git diff --exit-code
+
+    - name: Fail on orphan PNGs
+      run: |
+        orphans=$(git ls-files '*.png' | sed 's/\.png$/.drawio/' | while read f; do
+          test -f "$f" || echo "${f%.drawio}.png"
+        done)
+        if [[ -n "$orphans" ]]; then
+          echo "❌ Orphan PNGs found (no matching .drawio):"
+          echo "$orphans"
+          exit 1
+        fi
+
+    # ───────────────────────────────────────────────
+    # 5 ▸ fail if PNG ⇄ drawio pairs are incomplete
+    # ───────────────────────────────────────────────
+    - name: Fail on orphan diagrams
+      run: |
+        # ❶ PNG has no matching .drawio
+        png_orphans=$(git ls-files '*.png' | while read img; do
+          src="${img%.png}.drawio"
+          [[ -f "$src" ]] || echo "$img"
+        done)
+
+        # ❷ .drawio has no matching PNG
+        src_orphans=$(git ls-files '*.drawio' | while read src; do
+          img="${src%.drawio}.png"
+          [[ -f "$img" ]] || echo "$src"
+        done)
+
+        if [[ -n "$png_orphans$src_orphans" ]]; then
+          echo "❌ Orphan diagram files detected:"
+          [[ -n "$png_orphans" ]] && echo "• PNG with no source:" && echo "$png_orphans"
+          [[ -n "$src_orphans" ]] && echo "• .drawio with no PNG:" && echo "$src_orphans"
+          exit 1
+        else
+          echo "✔ No orphan diagrams found."
+        fi
