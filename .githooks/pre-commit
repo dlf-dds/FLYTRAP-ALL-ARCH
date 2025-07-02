@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+mapfile -t DRAWIOS < <(git diff --cached --name-only --diff-filter=ACM | grep '\.drawio$' || true)
+[[ ${#DRAWIOS[@]} -eq 0 ]] && exit 0
+
+# build the exact PNG list, one-for-one
+mapfile -t PNGS < <(printf '%s\n' "${DRAWIOS[@]/%.drawio/.png}")
+
+echo "↻ Regenerating ${#PNGS[@]} diagram(s)…"
+make "${PNGS[@]}"
+
+git add "${PNGS[@]}"

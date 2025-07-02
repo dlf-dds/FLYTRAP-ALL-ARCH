@@ -1,0 +1,24 @@
+name: Verify Draw.io diagrams
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  check-diagrams:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+    
+      # Docker is already available on ubuntu-latest; no extra setup step required
+
+
+      - name: Export all diagrams
+        run: |
+          docker run --rm -v "$PWD":/workspace -w /workspace \
+            rlespinasse/drawio-export -f png -o . $(git ls-files '*.drawio')
+            
+      - name: Verify PNGs up-to-date
+        run: git diff --exit-code
+
