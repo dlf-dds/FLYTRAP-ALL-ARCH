@@ -4,7 +4,9 @@ DRAWIO_IMAGE = rlespinasse/drawio-export
 # We’ll launch the container with "-v $(PWD):/workspace"
 # and then "-w /workspace/<diagram-dir>" for each file.
 
-DRAWIOS := $(shell git ls-files '*.drawio')
+# list changed *.drawio that still exist in HEAD
+DRAWIOS=$(git diff --name-only --diff-filter=AM "$BASE" HEAD -- '*.drawio')
+
 PNGS    := $(DRAWIOS:.drawio=.png)
 
 all: $(PNGS)

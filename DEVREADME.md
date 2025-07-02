@@ -1,6 +1,9 @@
+
 # ARCH DIAGRAM DEV README
 
 _Architecture diagrams for **Joint EX FLYTRAP / VANAHEIM**_
+
+[![Draw.io diagram check](https://github.com/dlf-dds/FLYTRAP-ALL-ARCH/actions/workflows/verify-drawio.yml/badge.svg)](https://github.com/dlf-dds/FLYTRAP-ALL-ARCH/actions/workflows/verify-drawio.yml)
 
 
 ## Prerequisites

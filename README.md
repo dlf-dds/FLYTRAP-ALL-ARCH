@@ -2,6 +2,8 @@
 
 **[DEV README.md](DEVREADME.md)**
 
+[![Draw.io diagram check](https://github.com/dlf-dds/FLYTRAP-ALL-ARCH/actions/workflows/verify-drawio.yml/badge.svg)](https://github.com/dlf-dds/FLYTRAP-ALL-ARCH/actions/workflows/verify-drawio.yml)
+
 ## Network Architecture Overview
 
 At JOINT EX FLYTRAP / VANAHEIM, the following diagrams illustrate how the network operates and how data flows both locally and globally. Refer to the `.drawio` files as authoritative sources; the `.png` images are generated from these files.

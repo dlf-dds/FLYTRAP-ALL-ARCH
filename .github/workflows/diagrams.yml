@@ -71,3 +71,14 @@ jobs:
     - name: Verify diagrams up-to-date
       if: steps.changed.outputs.PNGS != ''
       run: git diff --exit-code
+
+    - name: Fail on orphan PNGs
+      run: |
+        orphans=$(git ls-files '*.png' | sed 's/\.png$/.drawio/' | while read f; do
+          test -f "$f" || echo "${f%.drawio}.png"
+        done)
+        if [[ -n "$orphans" ]]; then
+          echo "❌ Orphan PNGs found (no matching .drawio):"
+          echo "$orphans"
+          exit 1
+        fi
