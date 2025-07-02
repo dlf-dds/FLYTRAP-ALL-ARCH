@@ -13,6 +13,8 @@ _Architecture diagrams for **Joint EX FLYTRAP / VANAHEIM**_
   Runs the Draw.io CLI without installing the desktop app
 - Git ≥ 2.9  
   Needed for `core.hooksPath`
+- Git LFS  
+  Stores every `.png` in the lightweight LFS store instead of bloating the repo
 
 
 
@@ -23,6 +25,8 @@ Pull the Draw.io CLI container:
 ```sh
 # Pull the Docker CLI (recommended)
 docker pull rlespinasse/drawio-export
+# One-time LFS initialisation on your machine
+git lfs install
 ```
 
 This Makefile, in the project root dir, renders .drawio to .png files.
@@ -88,13 +92,11 @@ The badge at the top of the README shows the most-recent **CI run**:
 Place this in `.gitattributes` to ensure proper handling of the `.drawio` files and their binary exports:
 
 ```gitattributes
-# Use XML diff for source diagrams (default)
+# Draw.io sources → XML diff
 *.drawio diff=xml
-# To enable a custom diff driver instead, comment the line above and uncomment:
-# *.drawio diff=drawio
 
-# Exported images are binary
-*.png binary
+# PNGs travel via Git LFS
+*.png filter=lfs diff=lfs merge=lfs -text
 
 ```
 
