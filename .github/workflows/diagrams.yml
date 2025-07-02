@@ -1,22 +1,54 @@
 name: Verify Draw.io diagrams
 
 on:
-  workflow_dispatch:      # manual “Run workflow” button
+  workflow_dispatch:                       # manual trigger
   pull_request:
   push:
-    branches: [ main, ci-diagram-test ]
 
 jobs:
   export-and-verify:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0                    # so we can diff against the base commit
 
-      # Regenerate every PNG with the same Makefile the hook uses
-      - name: Regenerate diagrams
-        run: make
+    # 1 ▸ get the list of *.drawio changed in this push / PR
+    - name: Collect changed diagrams
+      id: changed
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+        else
+          # for 'push' events: github.event.before is the previous commit on this ref
+          BASE_SHA="${{ github.event.before }}"
+        fi
 
-      # Fail if any regenerated PNG differs from repo
-      - name: Verify diagrams up to date
-        run: git diff --exit-code
+        # fallback for first commits or deleted branches
+        if [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+          BASE_SHA=$(git rev-list --max-parents=0 HEAD)
+        fi
 
+        echo "BASE_SHA=$BASE_SHA"
+
+        # list changed *.drawio files
+        FILES=$(git diff --name-only "$BASE_SHA" HEAD -- '*.drawio')
+        echo "Changed diagrams:"
+        echo "$FILES"
+
+        # convert to matching *.png targets
+        PNGS=$(echo "$FILES" | sed 's/\.drawio$/.png/' | xargs)
+        echo "PNGS=$PNGS" >> "$GITHUB_OUTPUT"
+
+    # 2 ▸ regenerate only those PNGs (skip step if none)
+    - name: Regenerate changed diagrams
+      if: steps.changed.outputs.PNGS != ''
+      run: |
+        echo "Running make on: ${{ steps.changed.outputs.PNGS }}"
+        make ${{ steps.changed.outputs.PNGS }}
+
+    # 3 ▸ fail if any regenerated PNG differs from repo
+    - name: Verify diagrams up to date
+      if: steps.changed.outputs.PNGS != ''
+      run: git diff --exit-code
