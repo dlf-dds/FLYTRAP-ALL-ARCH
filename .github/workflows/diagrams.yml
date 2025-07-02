@@ -4,7 +4,7 @@ on:
   workflow_dispatch:      # manual “Run workflow” button
   pull_request:
   push:
-    branches: [ main ci-diagram-test ]
+    branches: [ main, ci-diagram-test ]
 
 jobs:
   export-and-verify:
