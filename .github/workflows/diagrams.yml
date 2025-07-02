@@ -1,0 +1,66 @@
+name: Verify Draw.io diagrams
+
+on:
+  # Manual button
+  workflow_dispatch:
+  # Every push on *any* branch
+  push:
+  # Every PR (from any branch into any branch)
+  pull_request:
+
+jobs:
+  export-and-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+    # ────────────────────────────────
+    # 1 ▸ check out full history
+    # ────────────────────────────────
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0          # we need the merge-base for git diff
+
+    # ────────────────────────────────
+    # 2 ▸ list changed *.drawio files
+    # ────────────────────────────────
+    - name: Collect changed diagrams
+      id: changed
+      shell: bash
+      run: |
+        # figure out the "before" SHA
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          BASE="${{ github.event.pull_request.base.sha }}"
+        else
+          BASE="${{ github.event.before }}"
+        fi
+        # fallback for first push on a branch
+        [[ "$BASE" == "0000000000000000000000000000000000000000" ]] && \
+          BASE=$(git rev-list --max-parents=0 HEAD)
+
+        echo "BASE=$BASE"
+
+        # get changed drawio paths
+        DRAWIOS=$(git diff --name-only "$BASE" HEAD -- '*.drawio')
+        echo "DRAWIOS:"
+        echo "$DRAWIOS"
+
+        # build matching png list
+        PNGS=$(echo "$DRAWIOS" | sed 's/\.drawio$/.png/' | xargs)
+        echo "PNGS=$PNGS" >>"$GITHUB_OUTPUT"
+
+    # ────────────────────────────────
+    # 3 ▸ regenerate only those PNGs
+    # ────────────────────────────────
+    - name: Regenerate changed diagrams
+      if: steps.changed.outputs.PNGS != ''
+      run: |
+        echo "make -B targets: ${{ steps.changed.outputs.PNGS }}"
+        make -B ${{ steps.changed.outputs.PNGS }}
+
+
+    # ────────────────────────────────
+    # 4 ▸ fail if any PNG is stale
+    # ────────────────────────────────
+    - name: Verify diagrams up-to-date
+      if: steps.changed.outputs.PNGS != ''
+      run: git diff --exit-code
