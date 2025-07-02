@@ -1,24 +1,22 @@
 name: Verify Draw.io diagrams
 
 on:
+  workflow_dispatch:      # manual “Run workflow” button
   pull_request:
   push:
+    branches: [ main ]
 
 jobs:
-  check-diagrams:
+  export-and-verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-    
-      # Docker is already available on ubuntu-latest; no extra setup step required
+      # Regenerate every PNG with the same Makefile the hook uses
+      - name: Regenerate diagrams
+        run: make
 
-
-      - name: Export all diagrams
-        run: |
-          docker run --rm -v "$PWD":/workspace -w /workspace \
-            rlespinasse/drawio-export -f png -o . $(git ls-files '*.drawio')
-            
-      - name: Verify PNGs up-to-date
+      # Fail if any regenerated PNG differs from repo
+      - name: Verify diagrams up to date
         run: git diff --exit-code
 

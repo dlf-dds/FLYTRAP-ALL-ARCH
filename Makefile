@@ -1,23 +1,27 @@
-# root-level Makefile  ─ single source of truth
+# root-level Makefile – works for any depth, single or multi-page diagrams
 
-DRAWIO ?= docker run --rm \
-         -v "$$(pwd)":/workspace \
-         -w /workspace \
-         rlespinasse/drawio-export
+DRAWIO_IMAGE = rlespinasse/drawio-export
+# We’ll launch the container with "-v $(PWD):/workspace"
+# and then "-w /workspace/<diagram-dir>" for each file.
 
 DRAWIOS := $(shell git ls-files '*.drawio')
 PNGS    := $(DRAWIOS:.drawio=.png)
 
 all: $(PNGS)
 
-# -------------------------------------------------------
-# $< = path/to/foo.drawio
-# $@ = path/to/foo.png
+# target $@  : diagrams/foo.png
+# source $<  : diagrams/foo.drawio
 %.png: %.drawio
-	@echo "Exporting $< → $@"
-	@DIR=$$(dirname "$@"); BASEN=$$(basename "$@" .png); \
-	  $(DRAWIO) -f png -o "$$DIR" "$<" && { \
-	    test -f "$$DIR/$$BASEN-Page-1.png" && mv "$$DIR/$$BASEN-Page-1.png" "$@" || \
-	    mv "$$DIR/$$BASEN.png" "$@"; \
-	  }
-# -------------------------------------------------------
+	@SRC='$<';           \
+	  DIR=$$(dirname "$$SRC");                    \
+	  NAME=$$(basename "$$SRC" .drawio);          \
+	  echo "Exporting $$SRC → $@";                \
+	  docker run --rm                             \
+	    -v "$(PWD)":/workspace                    \
+	    -w "/workspace/$$DIR"                     \
+	    $(DRAWIO_IMAGE)                           \
+	    -f png -o . "$$NAME.drawio" &&            \
+	  (                                           \
+	    mv "$$DIR/$$NAME-Page-1.png" "$@" 2>/dev/null || \
+	    mv "$$DIR/$$NAME.png"        "$@" 2>/dev/null     \
+	  )
