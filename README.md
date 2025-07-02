@@ -1,4 +1,7 @@
 # FLYTRAP-ALL-ARCH
+
+**[DEV README.md](DEVREADME.md)**
+
 ## Network Architecture Overview
 
 At JOINT EX FLYTRAP / VANAHEIM, the following diagrams illustrate how the network operates and how data flows both locally and globally. Refer to the `.drawio` files as authoritative sources; the `.png` images are generated from these files.
