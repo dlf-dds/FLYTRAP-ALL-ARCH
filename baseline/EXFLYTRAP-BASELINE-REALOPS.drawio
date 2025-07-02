@@ -29,7 +29,7 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="jyh1h8HAa2u7fzU4bVlv-1" value="TRIK" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="160" y="184" width="40" height="40" as="geometry"/>
+                    <mxGeometry x="160" y="183" width="40" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="jyh1h8HAa2u7fzU4bVlv-2" value="TSM" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="160" y="250" width="40" height="40" as="geometry"/>

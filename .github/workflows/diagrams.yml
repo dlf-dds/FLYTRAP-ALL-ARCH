@@ -54,8 +54,9 @@ jobs:
     - name: Regenerate changed diagrams
       if: steps.changed.outputs.PNGS != ''
       run: |
-        echo "make targets: ${{ steps.changed.outputs.PNGS }}"
-        make ${{ steps.changed.outputs.PNGS }}
+        echo "make -B targets: ${{ steps.changed.outputs.PNGS }}"
+        make -B ${{ steps.changed.outputs.PNGS }}
+
 
     # ────────────────────────────────
     # 4 ▸ fail if any PNG is stale
