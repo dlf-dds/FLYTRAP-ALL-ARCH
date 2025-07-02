@@ -1,54 +1,65 @@
 name: Verify Draw.io diagrams
 
 on:
-  workflow_dispatch:                       # manual trigger
-  pull_request:
+  # Manual button
+  workflow_dispatch:
+  # Every push on *any* branch
   push:
+  # Every PR (from any branch into any branch)
+  pull_request:
 
 jobs:
   export-and-verify:
     runs-on: ubuntu-latest
 
     steps:
+    # ────────────────────────────────
+    # 1 ▸ check out full history
+    # ────────────────────────────────
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0                    # so we can diff against the base commit
+        fetch-depth: 0          # we need the merge-base for git diff
 
-    # 1 ▸ get the list of *.drawio changed in this push / PR
+    # ────────────────────────────────
+    # 2 ▸ list changed *.drawio files
+    # ────────────────────────────────
     - name: Collect changed diagrams
       id: changed
+      shell: bash
       run: |
+        # figure out the "before" SHA
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          BASE="${{ github.event.pull_request.base.sha }}"
         else
-          # for 'push' events: github.event.before is the previous commit on this ref
-          BASE_SHA="${{ github.event.before }}"
+          BASE="${{ github.event.before }}"
         fi
+        # fallback for first push on a branch
+        [[ "$BASE" == "0000000000000000000000000000000000000000" ]] && \
+          BASE=$(git rev-list --max-parents=0 HEAD)
 
-        # fallback for first commits or deleted branches
-        if [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
-          BASE_SHA=$(git rev-list --max-parents=0 HEAD)
-        fi
+        echo "BASE=$BASE"
 
-        echo "BASE_SHA=$BASE_SHA"
+        # get changed drawio paths
+        DRAWIOS=$(git diff --name-only "$BASE" HEAD -- '*.drawio')
+        echo "DRAWIOS:"
+        echo "$DRAWIOS"
 
-        # list changed *.drawio files
-        FILES=$(git diff --name-only "$BASE_SHA" HEAD -- '*.drawio')
-        echo "Changed diagrams:"
-        echo "$FILES"
+        # build matching png list
+        PNGS=$(echo "$DRAWIOS" | sed 's/\.drawio$/.png/' | xargs)
+        echo "PNGS=$PNGS" >>"$GITHUB_OUTPUT"
 
-        # convert to matching *.png targets
-        PNGS=$(echo "$FILES" | sed 's/\.drawio$/.png/' | xargs)
-        echo "PNGS=$PNGS" >> "$GITHUB_OUTPUT"
-
-    # 2 ▸ regenerate only those PNGs (skip step if none)
+    # ────────────────────────────────
+    # 3 ▸ regenerate only those PNGs
+    # ────────────────────────────────
     - name: Regenerate changed diagrams
       if: steps.changed.outputs.PNGS != ''
       run: |
-        echo "Running make on: ${{ steps.changed.outputs.PNGS }}"
+        echo "make targets: ${{ steps.changed.outputs.PNGS }}"
         make ${{ steps.changed.outputs.PNGS }}
 
-    # 3 ▸ fail if any regenerated PNG differs from repo
-    - name: Verify diagrams up to date
+    # ────────────────────────────────
+    # 4 ▸ fail if any PNG is stale
+    # ────────────────────────────────
+    - name: Verify diagrams up-to-date
       if: steps.changed.outputs.PNGS != ''
       run: git diff --exit-code
