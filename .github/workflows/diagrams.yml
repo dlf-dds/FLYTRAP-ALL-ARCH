@@ -11,14 +11,21 @@ on:
 jobs:
   export-and-verify:
     runs-on: ubuntu-latest
-
+    
+    # 0 ▸ check out full history
     steps:
-    # ────────────────────────────────
-    # 1 ▸ check out full history
-    # ────────────────────────────────
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0          # we need the merge-base for git diff
+
+    # 1 ▸ restore cache (if present)
+    - name: Restore Docker layer cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: /tmp/drawio-cache
+        # key can include image digest or tag to bust the cache when updated
+        key: drawio-export-${{ runner.os }}-v1
 
     # ────────────────────────────────
     # 2 ▸ list changed *.drawio files
