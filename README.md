@@ -48,7 +48,7 @@ As an example, here is one of the global data flow diagrams:
     
     [Download EXFLYTRAP-FULL-PICTURE.drawio](global/core4rce/EXFLYTRAP-FULL-PICTURE.drawio)
 
-- **full picture with statusP**  
+- **full picture with status**  
     Demonstrates our progress in establishing data flows coming out of EX FLYTRAP 3.0, leading into 4.0.
 
     ![full.png](simplified/EXFLYTRAP-FULL-with-status.png)
