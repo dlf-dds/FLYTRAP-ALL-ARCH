@@ -41,14 +41,19 @@ See GLobal Data Flow Diagrams in separate README files nearest to the diagram, f
 [Global Data Flow Diagrams](global/README.md)
 As an example, here is one of the global data flow diagrams:
 
-- **wideview-core4ce**  
-    Demonstrates collaboration with core4ce to enrich data with operationally relevant information, expedite its return to the warfighter, and share it with other environments for broader learning and action.
+- **full picture: all the data flows established in EX FLY TRAP**  
+    Demonstrates collaboration with many data brokering and command and control systems.
 
     ![full.png](simplified/EXFLYTRAP-FULL-PICTURE.png)
     
     [Download EXFLYTRAP-FULL-PICTURE.drawio](global/core4rce/EXFLYTRAP-FULL-PICTURE.drawio)
 
+- **full picture with statusP**  
+    Demonstrates our progress in establishing data flows coming out of EX FLYTRAP 3.0, leading into 4.0.
 
+    ![full.png](simplified/EXFLYTRAP-FULL-with-status.png)
+    
+    [Download EXFLYTRAP-FULL-with-status.drawio](global/core4rce/EXFLYTRAP-FULL-with-status.drawio)
 
 ---
 **File Reference:**  
