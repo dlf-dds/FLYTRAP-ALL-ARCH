@@ -21,7 +21,7 @@ At JOINT EX FLYTRAP / VANAHEIM, the following diagrams illustrate how the networ
 - **baseline-realops**  
     Illustrates the architecture with more than one 2CR SQDN. Note: these cannot communicate directly with each other—they must route up and out into the Nett Warrior cloud and back.
 
-    ![EXFLYTRAP-BASELINE-REALOPS.png](baseline/EXFLYTRAP-DATAPIPES-REALOPS.png)
+    ![EXFLYTRAP-BASELINE-REALOPS.png](baseline/EXFLYTRAP-BASELINE-REALOPS.png)
     
     [Download EXFLYTRAP-BASELINE-REALOPS.drawio](baseline/EXFLYTRAP-BASELINE-REALOPS.drawio)
 
