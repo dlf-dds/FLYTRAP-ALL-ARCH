@@ -44,9 +44,9 @@ As an example, here is one of the global data flow diagrams:
 - **wideview-core4ce**  
     Demonstrates collaboration with core4ce to enrich data with operationally relevant information, expedite its return to the warfighter, and share it with other environments for broader learning and action.
 
-    ![core4ce.png](global/core4ce/EXFLYTRAP-Core4ce.png)
+    ![full.png](simplified/EXFLYTRAP-FULL-PICTURE.png)
     
-    [Download EXFLYTRAP-Core4ce.drawio](global/core4rce/EXFLYTRAP-Core4ce.drawio)
+    [Download EXFLYTRAP-FULL-PICTURE.drawio](global/core4rce/EXFLYTRAP-FULL-PICTURE.drawio)
 
 
 
