@@ -1,77 +1,108 @@
+# .github/workflows/diagrams.yml
+# ──────────────────────────────
+# Auto-export Draw.io diagrams to PNG and keep them in-sync.
+# If someone commits only a .drawio file (e.g. via the GitHub web UI),
+# this job renders the PNG and pushes it back so the build stays green.
+# For PRs from forks we *don’t* push; instead the job fails so the
+# contributor knows they need to export locally (or you can switch to a
+# “create-pull-request” bot step if you prefer).
+
 name: Verify Draw.io diagrams
 
 on:
-  # Manual button
+  # Manual trigger
   workflow_dispatch:
-  # Every push on *any* branch
+  # Any direct push
   push:
-  # Every PR (from any branch into any branch)
+  # Any PR (fork → base or branch → branch)
   pull_request:
+
+# Allow the default GITHUB_TOKEN to push commits back
+permissions:
+  contents: write        # required for `git push`
 
 jobs:
   export-and-verify:
     runs-on: ubuntu-latest
-    
-    # 0 ▸ check out full history
+
     steps:
+    # 0 ▸ check out full history (we need merge-base for git diff)
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0          # we need the merge-base for git diff
+        fetch-depth: 0
 
-    # 1 ▸ restore cache (if present)
+    # 1 ▸ restore Docker layer cache for faster exports
     - name: Restore Docker layer cache
       id: cache
       uses: actions/cache@v4
       with:
         path: /tmp/drawio-cache
-        # key can include image digest or tag to bust the cache when updated
         key: drawio-export-${{ runner.os }}-v1
 
-    # ────────────────────────────────
     # 2 ▸ list changed *.drawio files
-    # ────────────────────────────────
     - name: Collect changed diagrams
       id: changed
       shell: bash
       run: |
-        # figure out the "before" SHA
+        # Figure out the commit to diff against
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           BASE="${{ github.event.pull_request.base.sha }}"
         else
           BASE="${{ github.event.before }}"
         fi
-        # fallback for first push on a branch
-        [[ "$BASE" == "0000000000000000000000000000000000000000" ]] && \
+        # Fallback for the first push on a branch
+        [[ "$BASE" == 0000000000000000000000000000000000000000 ]] && \
           BASE=$(git rev-list --max-parents=0 HEAD)
 
         echo "BASE=$BASE"
 
-        # get changed drawio paths
+        # Collect changed .drawio files
         DRAWIOS=$(git diff --name-only "$BASE" HEAD -- '*.drawio')
-        echo "DRAWIOS:"
         echo "$DRAWIOS"
 
-        # build matching png list
+        # Build the matching .png list
         PNGS=$(echo "$DRAWIOS" | sed 's/\.drawio$/.png/' | xargs)
         echo "PNGS=$PNGS" >>"$GITHUB_OUTPUT"
 
-    # ────────────────────────────────
-    # 3 ▸ regenerate only those PNGs
-    # ────────────────────────────────
+    # 3 ▸ regenerate those PNGs (if any)
     - name: Regenerate changed diagrams
       if: steps.changed.outputs.PNGS != ''
       run: |
         echo "make -B targets: ${{ steps.changed.outputs.PNGS }}"
         make -B ${{ steps.changed.outputs.PNGS }}
 
+    # 4 ▸ IF this is a direct push AND the diagrams changed,
+    #       commit the PNGs back to the same branch.
+    - name: Commit and push updated PNGs
+      if: |
+        github.event_name == 'push' &&
+        steps.changed.outputs.PNGS != ''
+      shell: bash
+      run: |
+        # Exit early if nothing actually changed
+        if git diff --quiet; then
+          echo "No PNG differences after regeneration."
+          exit 0
+        fi
 
-    # ────────────────────────────────
-    # 4 ▸ fail if any PNG is stale
-    # ────────────────────────────────
-    - name: Verify diagrams up-to-date
-      if: steps.changed.outputs.PNGS != ''
+        echo "PNG differences detected – committing them back."
+        git config --global user.name  "drawio-bot"
+        git config --global user.email "actions@github.com"
+
+        git add ${{ steps.changed.outputs.PNGS }}
+        git commit -m "Auto-export matching PNGs [skip ci]"
+        git push
+
+    # 5 ▸ IF this is a PR, fail when PNGs are stale so the
+    #       contributor knows to export them (or you can
+    #       replace this with a PR-from-bot step).
+    - name: Verify diagrams up-to-date (PRs only)
+      if: |
+        github.event_name == 'pull_request' &&
+        steps.changed.outputs.PNGS != ''
       run: git diff --exit-code
 
+    # 6 ▸ fail if we find PNGs with no source .drawio
     - name: Fail on orphan PNGs
       run: |
         orphans=$(git ls-files '*.png' | sed 's/\.png$/.drawio/' | while read f; do
@@ -83,28 +114,17 @@ jobs:
           exit 1
         fi
 
-    # ───────────────────────────────────────────────
-    # 5 ▸ fail if PNG ⇄ drawio pairs are incomplete
-    # ───────────────────────────────────────────────
+    # 7 ▸ fail if we find .drawio files with no PNG (after regeneration)
     - name: Fail on orphan diagrams
       run: |
-        # ❶ PNG has no matching .drawio
-        png_orphans=$(git ls-files '*.png' | while read img; do
-          src="${img%.png}.drawio"
-          [[ -f "$src" ]] || echo "$img"
-        done)
-
-        # ❷ .drawio has no matching PNG
         src_orphans=$(git ls-files '*.drawio' | while read src; do
           img="${src%.drawio}.png"
           [[ -f "$img" ]] || echo "$src"
         done)
-
-        if [[ -n "$png_orphans$src_orphans" ]]; then
-          echo "❌ Orphan diagram files detected:"
-          [[ -n "$png_orphans" ]] && echo "• PNG with no source:" && echo "$png_orphans"
-          [[ -n "$src_orphans" ]] && echo "• .drawio with no PNG:" && echo "$src_orphans"
+        if [[ -n "$src_orphans" ]]; then
+          echo "❌ .drawio files without PNG:"
+          echo "$src_orphans"
           exit 1
-        else
-          echo "✔ No orphan diagrams found."
         fi
+
+    
